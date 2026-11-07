@@ -1,0 +1,14 @@
+{
+  "name": "learning-project",
+  "private": true,
+  "type": "module",
+  "description": "Agent-driven learning project for OpenCode",
+  "scripts": {
+    "test": "node --test",
+    "check": "node scripts/validate-config.mjs",
+    "verify": "npm run check && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
