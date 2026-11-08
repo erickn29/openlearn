@@ -12,20 +12,61 @@
 
 Цикл: `/study <тема>` → ответы на диагностику → `/lesson` → ответы на задания → `/check <ответы>` → `/progress`.
 
+## Тема или профессия
+
+```text
+/study компьютерные сети        → subjects/computer-networks/
+/study python backend developer → tracks/python-backend/ + subjects/<секция>/
+```
+
+Одна тема — один предмет. Профессия — трек: набор секций (`python-core`, `git-basics`, `sql-for-backend`, `fastapi`) со своим порядком, общей диагностикой и агрегированным дашбордом. Секции лежат плоско в `subjects/` и не дублируются между треками: `git-basics` может входить и в backend, и во frontend.
+
 ## Структура
 
 ```text
 .opencode/
 ├── agents/          study-orchestrator (primary), teacher, evaluator
-├── commands/        /study /lesson /check /progress
+├── commands/        /study /lesson /check /progress /market
 └── skills/
     ├── subject-setup/      план + диагностика + прогресс
-    ├── lesson-generator/   теория + задания + ключ ответов
+    ├── market-research/    требования рынка с hh.ru: market.json + market.md
+    ├── lesson-generator/   теория + задания + ключ ответов + линтер
     ├── answer-evaluator/   рубрика и evaluation.json
     ├── lesson-checks/      проверка файловых заданий (код, Docker, конфиги)
-    └── gamify-progress/    движок progress.json + рендер дашборда
-subjects/<slug>/     отдельная папка на тему, например computer-networks
+    └── gamify-progress/    движок progress.json, треков и дашбордов
+subjects/<slug>/     секция = обычный предмет, например computer-networks
+tracks/<slug>/       профессия: состав секций, общая диагностика, агрегат прогресса
 ```
+
+## Урок
+
+Один урок — одна тема и один проверяемый результат. 15–25 минут: чтение 5–7,
+практика остальное. Теория не больше 5 абзацев прозы, обязательны пример кода и
+раздел «Где это в работе». Формат проверяет линтер:
+
+```sh
+node .opencode/skills/lesson-generator/scripts/lint-lesson.mjs \
+  --lesson subjects/<slug>/lessons/lesson_N
+```
+
+Секция — 15–25 уроков, одиночный предмет — 20–30. Финальный урок секции —
+чек-поинт «всё вместе». Длительность уроков лежит в `plan.md` колонкой «мин»,
+по ней считается остаток часов на дашборде.
+
+## Требования рынка
+
+Перед составлением плана проект собирает требования к целевой роли из публичного поиска hh.ru: навыки, опыт, формат работы и зарплаты. Отчёт `market.md` ложится рядом с планом, и каждый навык с долей 30% и выше либо получает урок, либо явно исключается с причиной.
+
+```sh
+node .opencode/skills/market-research/scripts/market.mjs roles --text "аналитик данных"
+node .opencode/skills/market-research/scripts/market.mjs collect --subject subjects/<slug> --role 156
+node .opencode/skills/market-research/scripts/market.mjs render --subject subjects/<slug>
+
+# Для профессии снапшот один на трек: hh-роль описывает профессию, а не навык
+node .opencode/skills/market-research/scripts/market.mjs collect --track tracks/<track> --role 96
+```
+
+Обновить снапшот: `/market <slug>`. Подробности — в `market-research/SKILL.md`.
 
 ## Разделение ответственности
 
@@ -41,7 +82,12 @@ npm test                                       # только юнит-тест�
 node .opencode/skills/gamify-progress/scripts/progress.mjs init --help  # см. gamify-progress/SKILL.md
 ```
 
-Никогда не редактируйте `subjects/*/progress.json` и `dashboard.html` вручную. Оба файла принадлежат скрипту. `dashboard.html` хранит данные внутри себя, поэтому открывается по `file://` без сервера.
+Никогда не редактируйте `progress.json`, `dashboard.html`, `track.json` вручную. Все три принадлежат скрипту. `dashboard.html` хранит данные внутри себя, поэтому открывается по `file://` без сервера.
+
+```sh
+# Агрегат трека: только читает progress.json секций
+node .opencode/skills/gamify-progress/scripts/progress.mjs track render --track tracks/<track>
+```
 
 ## Оценка
 

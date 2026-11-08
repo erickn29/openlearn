@@ -9,11 +9,13 @@ description: Обновляет XP, уровни, стрики и бейджи �
 
 ## Команды
 
+### Секция (обычный предмет)
+
 ```sh
 # Создать файл прогресса предмета
 node .opencode/skills/gamify-progress/scripts/progress.mjs init \
   --progress subjects/<slug>/progress.json \
-  --subject "Компьютерные сети" --slug computer-networks --total 12
+  --subject "Компьютерные сети" --slug computer-networks --total 24
 
 # Отметить диагностику пройденной (выдаёт signal_acquired)
 node .opencode/skills/gamify-progress/scripts/progress.mjs diagnostic \
@@ -45,15 +47,32 @@ node .opencode/skills/gamify-progress/scripts/progress.mjs render \
   --out subjects/<slug>/dashboard.html
 ```
 
+### Трек (профессия из нескольких секций)
+
+```sh
+# Создать трек: секции должны уже существовать в subjects/
+node .opencode/skills/gamify-progress/scripts/progress.mjs track init \
+  --track tracks/python-backend --title "Python backend" --role 96 \
+  --section python-core:1 --section git-basics:2 --section fastapi:3:optional
+
+# Агрегированный дашборд по всем секциям
+node .opencode/skills/gamify-progress/scripts/progress.mjs track render \
+  --track tracks/python-backend
+```
+
+`track` ничего не меняет в `subjects/` — он только читает `progress.json` секций и `plan.md` (колонку «мин»). Третий элемент `--section` — `required` (по умолчанию) или `optional`: необязательная секция не держит трек открытым.
+
 ## Правила
 
 - `complete` начисляет `score × 10` XP и `+10` за 9/9.
 - Файловый урок без текстовых ответов: вместо `--score` передай `--checks <checks-result.json>`. Оценка = `round(9 × вес пройденных / общий вес)`; `complete` дополнительно требует `status: "passed"` и не опускает оценку ниже 7.
 - `init` отказывается перезаписывать существующий `progress.json`; `--force` — только для осознанного сброса предмета.
+- `track init` так же отказывается перезаписывать `track.json` без `--force`, требует, чтобы каждая секция уже лежала в `subjects/`, и ловит дубли slug и порядка.
 - `attempt` фиксирует попытку и обновляет стрик, но никогда не начисляет XP.
 - Урок засчитывается один раз. Повторный `complete` для того же урока падает, если не передан `--force`.
 - `--date YYYY-MM-DD` переопределяет сегодняшнюю дату для бэкфилла и тестов.
 - `--sources` отмечает, что ученик сослался на RFC или документацию (выдаёт `rfc_reader`).
 - Скрытые бейджи (`night_owl`, `speedrun`) есть в данных, но дашборд показывает их только после получения.
+- Пороги `three_way_handshake` (10 уроков) и `speedrun` (5 уроков за день) ограничены длиной предмета: в коротком предмете бейдж остаётся достижимым.
 
 Условия бейджей — в `references/badges.md`, структура JSON — в `references/schema.md`.
